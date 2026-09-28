@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="google" content="notranslate">
-  <title>KeyVault Firebase</title>
+  <title>HENRIQUE MODS KEYS Firebase</title>
   <style>
     :root {
       color-scheme: dark;
@@ -196,7 +196,7 @@
       <div class="brand">
         <div class="brand-icon" aria-hidden="true">⌕</div>
         <div>
-          <p class="brand-name">KEYVAULT</p>
+          <p class="brand-name">HENRIQUE MODS KEYS</p>
           <p class="brand-subtitle">Distribuição segura de acessos</p>
         </div>
       </div>
@@ -207,7 +207,7 @@
       <section>
         <div class="eyebrow">✦ &nbsp;Acesso individual</div>
         <h1>Gere sua key.<span>Use uma vez.</span></h1>
-        <p class="lead">Cada key é retirada diretamente do seu Firebase. Quando alguém gera uma key, ela é marcada como usada imediatamente e não volta a aparecer para outra pessoa.</p>
+        <p class="lead">Quando alguém gera uma key, ela é marcada como usada imediatamente e não volta a aparecer para outra pessoa.</p>
         <div class="features">
           <span class="feature"><b>♢</b> Reserva atômica</span>
           <span class="feature"><b>✓</b> Sem duplicidade</span>
@@ -245,6 +245,7 @@
     const FIREBASE_DATABASE_URL = "https://gerador-de-key-298e1-default-rtdb.firebaseio.com";
     const KEYS_PATH = "KeysUsers";
     const FREE_STATUSES = ["livre", "disponivel", "disponível", "available", "free"];
+    const COOLDOWN_MS = 2 * 60 * 60 * 1000;
 
     const $ = (id) => document.getElementById(id);
     const countEl = $("availableCount");
@@ -313,8 +314,22 @@
 
     async function claimNextKey(deviceId) {
       const records = await getRecords();
-      const alreadyClaimed = Object.values(records).some(record => record && (record.deviceId === deviceId || record.dispositivoId === deviceId));
-      if (alreadyClaimed) throw new Error("Este dispositivo já gerou uma key.");
+      const previousClaim = Object.values(records)
+        .filter(record => record && (record.deviceId === deviceId || record.dispositivoId === deviceId))
+        .map(record => Date.parse(record.reservadoEm || ""))
+        .filter(timestamp => Number.isFinite(timestamp))
+        .sort((a, b) => b - a)[0];
+
+      if (previousClaim) {
+        const remaining = COOLDOWN_MS - (Date.now() - previousClaim);
+        if (remaining > 0) {
+          const minutes = Math.ceil(remaining / 60000);
+          const hours = Math.floor(minutes / 60);
+          const restMinutes = minutes % 60;
+          const wait = hours ? `${hours}h${restMinutes ? ` e ${restMinutes}min` : ""}` : `${minutes}min`;
+          throw new Error(`Você já gerou uma key. Tente novamente em ${wait}.`);
+        }
+      }
 
       const candidates = Object.entries(records)
         .filter(([, record]) => record && isAvailable(record) && record.key)
@@ -397,6 +412,12 @@
         setStatus("Não foi possível copiar automaticamente.", "error");
       }
     });
+
+    refreshStats();
+  </script>
+</body>
+</html>
+
 
     refreshStats();
   </script>
